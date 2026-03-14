@@ -1013,6 +1013,7 @@ let G = {
   votes:{}, voteIdx:0, selVote:null,
   scores:{},
   timerInterval:null,
+  lastCat:null,
 };
 let nextId=10;
 
@@ -1166,15 +1167,22 @@ function closeCat(){
 // ═══════════════════════════════
 // GAME START
 // ═══════════════════════════════
+function pickWord(){
+  let pool=WORDS.filter(w=>G.categories.includes(w.c)&&w.c!==G.lastCat);
+  if(!pool.length)pool=WORDS.filter(w=>G.categories.includes(w.c));
+  const pick=pool[Math.floor(Math.random()*pool.length)]||WORDS[0];
+  G.lastCat=pick.c;
+  return pick;
+}
+
 function startGame(){
   // Fill unnamed
   G.players.forEach((p,i)=>{if(!p.name.trim())p.name='Player '+(i+1)});
   G.players=G.players.filter(p=>p.name.trim());
   if(G.players.length<3)return;
 
-  // Pick word from selected categories
-  const pool=WORDS.filter(w=>G.categories.includes(w.c));
-  const pick=pool[Math.floor(Math.random()*pool.length)]||WORDS[0];
+  // Pick word from selected categories, avoiding last category
+  const pick=pickWord();
   G.word=pick.w; G.hint=pick.h; G.cat=pick.c;
 
   // Pick impostors
@@ -1405,8 +1413,7 @@ function launchConfetti(){
 // PLAY AGAIN / LEADERBOARD
 // ═══════════════════════════════
 function playAgain(){
-  const pool=WORDS.filter(w=>G.categories.includes(w.c));
-  const pick=pool[Math.floor(Math.random()*pool.length)]||WORDS[0];
+  const pick=pickWord();
   G.word=pick.w; G.hint=pick.h; G.cat=pick.c;
   const shuffled=[...Array(G.players.length).keys()].sort(()=>Math.random()-.5);
   G.impostorIdxs=shuffled.slice(0,Math.min(G.impostorCount,Math.floor(G.players.length/2)));
