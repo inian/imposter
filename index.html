@@ -1005,6 +1005,8 @@ const AudioCtx=window.AudioContext||window.webkitAudioContext;
 let _ctx=null;
 function getCtx(){if(!_ctx)_ctx=new AudioCtx();return _ctx;}
 
+function getCtxReady(){const ctx=getCtx();if(ctx.state==='suspended')ctx.resume();return ctx;}
+
 function playTone(freq,type,start,duration,gain,ctx,dest){
   const o=ctx.createOscillator(),g=ctx.createGain();
   o.type=type;o.frequency.value=freq;
@@ -1018,13 +1020,13 @@ function playTone(freq,type,start,duration,gain,ctx,dest){
 
 // Bright ascending chime — regular player
 function soundPlayer(){
-  const ctx=getCtx(),dest=ctx.destination;
+  const ctx=getCtxReady(),dest=ctx.destination;
   [[523,.0,.18],[659,.07,.18],[784,.14,.28],[1047,.22,.4]].forEach(([f,s,d])=>playTone(f,'sine',s,d,.18,ctx,dest));
 }
 
 // Sinister low drone + creeping tones — imposter
 function soundImposter(){
-  const ctx=getCtx(),dest=ctx.destination;
+  const ctx=getCtxReady(),dest=ctx.destination;
   // low rumble
   playTone(55,'sawtooth',0,.7,.08,ctx,dest);
   playTone(58,'sawtooth',0,.7,.06,ctx,dest);
@@ -1036,19 +1038,19 @@ function soundImposter(){
 
 // Dramatic reveal fanfare — results screen
 function soundReveal(){
-  const ctx=getCtx(),dest=ctx.destination;
+  const ctx=getCtxReady(),dest=ctx.destination;
   [[330,.0,.15],[392,.1,.15],[494,.2,.15],[659,.3,.4]].forEach(([f,s,d])=>playTone(f,'triangle',s,d,.2,ctx,dest));
 }
 
 // Confetti win sound
 function soundWin(){
-  const ctx=getCtx(),dest=ctx.destination;
+  const ctx=getCtxReady(),dest=ctx.destination;
   [[523,.0,.12],[659,.08,.12],[784,.16,.12],[1047,.24,.3],[1319,.34,.4]].forEach(([f,s,d])=>playTone(f,'sine',s,d,.15,ctx,dest));
 }
 
 // Imposter escaped — low, tense
 function soundEscape(){
-  const ctx=getCtx(),dest=ctx.destination;
+  const ctx=getCtxReady(),dest=ctx.destination;
   [[110,.0,.5],[104,.15,.5],[98,.3,.6]].forEach(([f,s,d])=>playTone(f,'sawtooth',s,d,.1,ctx,dest));
   playTone(220,'square',.5,.2,.06,ctx,dest);
 }
@@ -1221,11 +1223,10 @@ function startGame(){
   const pick=pickWord();
   G.word=pick.w; G.hint=pick.h; G.cat=pick.c;
 
-  // Pick impostors
-  const idxs=[];
-  const shuffled=[...Array(G.players.length).keys()].sort(()=>Math.random()-.5);
-  for(let i=0;i<Math.min(G.impostorCount,Math.floor(G.players.length/2));i++)idxs.push(shuffled[i]);
-  G.impostorIdxs=idxs;
+  // Pick impostors (Fisher-Yates shuffle for unbiased selection)
+  const shuffled=[...Array(G.players.length).keys()];
+  for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
+  G.impostorIdxs=shuffled.slice(0,Math.min(G.impostorCount,Math.floor(G.players.length/2)));
 
   // Reset
   G.dealIdx=0; G.revealed=false;
@@ -1455,7 +1456,8 @@ function launchConfetti(){
 function playAgain(){
   const pick=pickWord();
   G.word=pick.w; G.hint=pick.h; G.cat=pick.c;
-  const shuffled=[...Array(G.players.length).keys()].sort(()=>Math.random()-.5);
+  const shuffled=[...Array(G.players.length).keys()];
+  for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
   G.impostorIdxs=shuffled.slice(0,Math.min(G.impostorCount,Math.floor(G.players.length/2)));
   G.dealIdx=0; G.revealed=false;
   G.players.forEach(p=>{if(!G.scores[p.name])G.scores[p.name]={score:0,wins:0,rounds:0,imposterWins:0};G.scores[p.name].rounds++});
