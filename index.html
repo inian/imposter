@@ -998,62 +998,6 @@ let G = {
 };
 let nextId=10;
 
-// ═══════════════════════════════
-// SOUNDS (Web Audio API)
-// ═══════════════════════════════
-const AudioCtx=window.AudioContext||window.webkitAudioContext;
-let _ctx=null;
-function getCtx(){if(!_ctx)_ctx=new AudioCtx();return _ctx;}
-
-function getCtxReady(){const ctx=getCtx();if(ctx.state==='suspended')ctx.resume();return ctx;}
-
-function playTone(freq,type,start,duration,gain,ctx,dest){
-  const o=ctx.createOscillator(),g=ctx.createGain();
-  o.type=type;o.frequency.value=freq;
-  g.gain.setValueAtTime(0,ctx.currentTime+start);
-  g.gain.linearRampToValueAtTime(gain,ctx.currentTime+start+0.01);
-  g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+start+duration);
-  o.connect(g);g.connect(dest);
-  o.start(ctx.currentTime+start);
-  o.stop(ctx.currentTime+start+duration+0.05);
-}
-
-// Bright ascending chime — regular player
-function soundPlayer(){
-  const ctx=getCtxReady(),dest=ctx.destination;
-  [[523,.0,.18],[659,.07,.18],[784,.14,.28],[1047,.22,.4]].forEach(([f,s,d])=>playTone(f,'sine',s,d,.18,ctx,dest));
-}
-
-// Sinister low drone + creeping tones — imposter
-function soundImposter(){
-  const ctx=getCtxReady(),dest=ctx.destination;
-  // low rumble
-  playTone(55,'sawtooth',0,.7,.08,ctx,dest);
-  playTone(58,'sawtooth',0,.7,.06,ctx,dest);
-  // rising menace
-  [[220,.1,.3],[185,.25,.35],[160,.42,.5]].forEach(([f,s,d])=>playTone(f,'sine',s,d,.12,ctx,dest));
-  // sharp sting
-  playTone(440,'square',.45,.12,.07,ctx,dest);
-}
-
-// Dramatic reveal fanfare — results screen
-function soundReveal(){
-  const ctx=getCtxReady(),dest=ctx.destination;
-  [[330,.0,.15],[392,.1,.15],[494,.2,.15],[659,.3,.4]].forEach(([f,s,d])=>playTone(f,'triangle',s,d,.2,ctx,dest));
-}
-
-// Confetti win sound
-function soundWin(){
-  const ctx=getCtxReady(),dest=ctx.destination;
-  [[523,.0,.12],[659,.08,.12],[784,.16,.12],[1047,.24,.3],[1319,.34,.4]].forEach(([f,s,d])=>playTone(f,'sine',s,d,.15,ctx,dest));
-}
-
-// Imposter escaped — low, tense
-function soundEscape(){
-  const ctx=getCtxReady(),dest=ctx.destination;
-  [[110,.0,.5],[104,.15,.5],[98,.3,.6]].forEach(([f,s,d])=>playTone(f,'sawtooth',s,d,.1,ctx,dest));
-  playTone(220,'square',.5,.2,.06,ctx,dest);
-}
 
 function loadScores(){try{const s=localStorage.getItem('imp-scores');if(s)G.scores=JSON.parse(s)}catch(e){}}
 function saveScores(){try{localStorage.setItem('imp-scores',JSON.stringify(G.scores))}catch(e){}}
@@ -1282,7 +1226,6 @@ function handleReveal(){
   G.revealed=true;
 
   const isImposter=G.impostorIdxs.includes(G.dealIdx);
-  isImposter?soundImposter():soundPlayer();
   const panel=document.getElementById('reveal-panel');
   panel.className='reveal-panel'+(isImposter?' imposter-revealed':'');
 
@@ -1377,7 +1320,6 @@ function skipTimer(){clearInterval(G.timerInterval);revealImposter();}
 // ═══════════════════════════════
 function revealImposter(){
   clearInterval(G.timerInterval);
-  soundReveal();
 
   // Reset outcome buttons & hide actions
   document.querySelectorAll('.outcome-btn').forEach(b=>b.disabled=false);
@@ -1417,11 +1359,9 @@ function recordOutcome(imposterWon){
         G.scores[p.name].score+=2; G.scores[p.name].wins++;
       }
     });
-    soundWin();
     launchConfetti();
   } else {
     // Imposter escaped
-    soundEscape();
     G.impostorIdxs.forEach(i=>{
       const p=G.players[i];
       if(!G.scores[p.name])G.scores[p.name]={score:0,wins:0,rounds:0,imposterWins:0};
